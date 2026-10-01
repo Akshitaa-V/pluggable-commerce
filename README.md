@@ -128,6 +128,3 @@ The Java API tests start the real server and real fake extensions on random port
 - No authentication on the admin API, and no signing of requests to extensions; both would be needed before real use.
 - The catalog is a fixed demo list.
 
-## How it was built
-
-I built this with an AI coding agent (Claude Code) as a pair programmer and reviewed every part. I chose the design, the safety rules and the trade-offs above, and I'm happy to walk through any of the code.
