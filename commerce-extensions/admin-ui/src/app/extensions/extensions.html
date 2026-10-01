@@ -1,0 +1,87 @@
+<section>
+  <h2>Extensions</h2>
+  <p class="hint">
+    Extensions are external services the core calls at fixed hooks. They change pricing or
+    block orders without any change to the core's code.
+  </p>
+
+  @if (error(); as message) {
+    <p class="alert" role="alert">{{ message }}</p>
+  }
+
+  @if (extensions().length === 0) {
+    <p class="empty">No extensions registered yet.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Hook</th>
+          <th>Endpoint</th>
+          <th>Timeout</th>
+          <th>On failure</th>
+          <th>Status</th>
+          <th><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (ext of extensions(); track ext.id) {
+          <tr [class.disabled]="!ext.enabled">
+            <td>{{ ext.name }}</td>
+            <td><code>{{ ext.hook }}</code></td>
+            <td class="url">{{ ext.url }}</td>
+            <td>{{ ext.timeoutMs }} ms</td>
+            <td>{{ ext.failurePolicy }}</td>
+            <td>{{ ext.enabled ? 'Enabled' : 'Disabled' }}</td>
+            <td class="actions">
+              <button type="button" (click)="toggle(ext)">
+                {{ ext.enabled ? 'Disable' : 'Enable' }}
+              </button>
+              <button type="button" class="danger" (click)="remove(ext)">Remove</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>
+
+<section>
+  <h3>Register an extension</h3>
+  <form [formGroup]="form" (ngSubmit)="register()" novalidate>
+    <label>
+      Name
+      <input formControlName="name" placeholder="Bulk discounts" />
+    </label>
+    <label>
+      Hook
+      <select formControlName="hook">
+        <option value="cart.price">cart.price (adjust prices)</option>
+        <option value="order.validate">order.validate (approve or reject orders)</option>
+      </select>
+    </label>
+    <label class="wide">
+      Endpoint URL
+      <input formControlName="url" placeholder="http://localhost:8081/hooks/cart-price" />
+    </label>
+    <label>
+      Timeout (ms)
+      <input type="number" formControlName="timeoutMs" min="50" max="5000" />
+    </label>
+    @if (form.controls.hook.value === 'order.validate') {
+      <label>
+        If it fails
+        <select formControlName="failurePolicy">
+          <option value="SKIP">Skip and warn</option>
+          <option value="BLOCK">Block the order</option>
+        </select>
+      </label>
+    }
+    @if (form.touched && form.invalid) {
+      <p class="alert wide">Give a name, an http(s) URL and a timeout between 50 and 5000 ms.</p>
+    }
+    <div class="wide">
+      <button type="submit" [disabled]="saving()">Register</button>
+    </div>
+  </form>
+</section>

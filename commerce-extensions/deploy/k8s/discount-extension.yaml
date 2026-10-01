@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discount-extension
+  namespace: commerce
+  labels:
+    app.kubernetes.io/name: discount-extension
+spec:
+  # Stateless, so it can scale out freely.
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: discount-extension
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: discount-extension
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: discount-extension
+          image: discount-extension:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8081
+          env:
+            - name: PORT
+              value: "8081"
+            - name: BULK_MIN_QUANTITY
+              value: "5"
+            - name: BULK_PERCENT
+              value: "10"
+            - name: MAX_QUANTITY_PER_SKU
+              value: "20"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 16Mi
+            limits:
+              cpu: 250m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: discount-extension
+  namespace: commerce
+spec:
+  selector:
+    app.kubernetes.io/name: discount-extension
+  ports:
+    - name: http
+      port: 8081
+      targetPort: http

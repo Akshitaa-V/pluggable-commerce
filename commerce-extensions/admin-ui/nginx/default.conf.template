@@ -1,0 +1,23 @@
+# Rendered by the nginx image at start-up: ${CORE_URL} comes from the environment
+# (docker-compose or the Kubernetes Deployment).
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+
+    location /api/ {
+        proxy_pass ${CORE_URL};
+        proxy_set_header Host $host;
+        proxy_read_timeout 15s;
+    }
+
+    location = /healthz {
+        access_log off;
+        return 200 'ok';
+    }
+
+    # Angular router: unknown paths fall back to index.html.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

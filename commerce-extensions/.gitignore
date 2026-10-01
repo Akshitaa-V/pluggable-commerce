@@ -1,0 +1,18 @@
+# Java
+core/target/
+
+# Rust
+extensions/discount-rs/target/
+
+# Angular
+admin-ui/node_modules/
+admin-ui/dist/
+admin-ui/.angular/
+admin-ui/coverage/
+
+# Editors and OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

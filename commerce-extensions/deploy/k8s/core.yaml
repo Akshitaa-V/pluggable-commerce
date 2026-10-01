@@ -1,0 +1,94 @@
+# Which extensions the core registers at start-up. Changing this file and restarting the
+# core is how an operator adds or removes an extension without rebuilding any image.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: core-extensions
+  namespace: commerce
+data:
+  BOOTSTRAP_EXTENSIONS: |
+    [
+      {"name": "Rust discount rules", "hook": "cart.price",
+       "url": "http://discount-extension:8081/hooks/cart-price", "timeoutMs": 800},
+      {"name": "Rust quantity limit", "hook": "order.validate",
+       "url": "http://discount-extension:8081/hooks/order-validate", "timeoutMs": 800,
+       "failurePolicy": "BLOCK"}
+    ]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core
+  namespace: commerce
+  labels:
+    app.kubernetes.io/name: core
+spec:
+  # One replica: the registry and orders are kept in memory (see README, limitations).
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: core
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: core
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: core
+          image: commerce-core:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: ALLOWED_ORIGIN
+              value: ""
+          envFrom:
+            - configMapRef:
+                name: core-extensions
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # The JVM writes small temp files; everything else stays read-only.
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core
+  namespace: commerce
+spec:
+  selector:
+    app.kubernetes.io/name: core
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

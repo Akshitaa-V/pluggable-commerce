@@ -1,0 +1,33 @@
+# Runs the whole system locally: docker compose up --build
+# Admin UI: http://localhost:4200   Core API: http://localhost:8080
+services:
+  core:
+    build: ./core
+    ports:
+      - "8080:8080"
+    environment:
+      ALLOWED_ORIGIN: ""
+      # Register the Rust extension at start-up, the same way the Kubernetes ConfigMap does.
+      BOOTSTRAP_EXTENSIONS: >-
+        [{"name":"Rust discount rules","hook":"cart.price","url":"http://discount-extension:8081/hooks/cart-price","timeoutMs":800},
+         {"name":"Rust quantity limit","hook":"order.validate","url":"http://discount-extension:8081/hooks/order-validate","timeoutMs":800,"failurePolicy":"BLOCK"}]
+    depends_on:
+      discount-extension:
+        condition: service_started
+
+  discount-extension:
+    build: ./extensions/discount-rs
+    environment:
+      PORT: "8081"
+      BULK_MIN_QUANTITY: "5"
+      BULK_PERCENT: "10"
+      MAX_QUANTITY_PER_SKU: "20"
+
+  admin-ui:
+    build: ./admin-ui
+    ports:
+      - "4200:8080"
+    environment:
+      CORE_URL: http://core:8080
+    depends_on:
+      - core
